@@ -1,6 +1,7 @@
-//This code uses a push button as a toggle switch to 1) record data from a sensor (MPU6050 accerlerameter/gyroscope) until the button is pushed again to close the file. 
+//This code uses a push button as a toggle switch to 1) record data from a sensor (MPU6050 accerlerameter/gyroscope and Dynamixel servos) until the button is pushed again to close the file. 
 //Each file has a unique number according to the number of clicks
 //The name of the file can be changed in line sprintf(fileName,"JUN8_%d.CSV",buttonPressCount++);
+
 //Button
 #define button_pin 7 
  int buttonStateNow; 
@@ -12,7 +13,7 @@
 //SD
 #include <SD.h>
 #include <Wire.h>
-int chipSelect = 4; 
+int chipSelect = 53; // pin4 for UNO pin53 for Mega
 File file;
 int count;
 char fileName[20];
@@ -24,9 +25,50 @@ char fileName[20];
 
 Adafruit_MPU6050 mpu;
 
+//Dynamixel Servo initiation
+#include <Dynamixel2Arduino.h>
+#include <actuator.h>
+
+#if defined(ARDUINO_AVR_MEGA2560)
+  #include <SoftwareSerial.h>
+  SoftwareSerial soft_serial(7,8);
+  #define DXL_SERIAL Serial
+  #define DEBUG_SERIAL soft_serial
+  const int DXL_DIR_PIN = 2;
+
+#endif
+
+const uint8_t DXL_ID1  = 1; 
+const uint8_t DXL_ID2  = 2;
+const uint8_t DXL_ID3 = 3;
+const float DXL_PROTOCOL_VERSION = 2.0; 
+
+Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
+
+using namespace ControlTableItem;
+
  void setup() {
   // put your setup code here, to run once:
 Serial.begin(115200);
+
+  dxl.begin(57600);
+  dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
+  dxl.ping(DXL_ID1);
+  dxl.ping(DXL_ID2);
+  dxl.ping(DXL_ID3);
+
+  dxl.torqueOff(DXL_ID1);
+  dxl.torqueOff(DXL_ID2);
+  dxl.torqueOff(DXL_ID3);
+  dxl.setOperatingMode(DXL_ID1, OP_VELOCITY);
+  dxl.setOperatingMode(DXL_ID2, OP_VELOCITY);
+  dxl.setOperatingMode(DXL_ID3, OP_VELOCITY);
+  dxl.torqueOn(DXL_ID1);
+  dxl.torqueOn(DXL_ID2);
+  dxl.torqueOn(DXL_ID3);
+
+//Serial.begin(57600);
+
 pinMode(button_pin, INPUT_PULLUP);
 
 //MPU6050
@@ -70,18 +112,58 @@ void loop() {
 if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
        
     sprintf(fileName,"JUN8_%d.CSV",buttonPressCount++);
+    delay(100);
     file = SD.open(fileName, FILE_WRITE);
+    file.println("time, xAcc, yAcc, zAcc, xRot, yRot, zRot, temp, servo1Pos, servo2Pos, servo3Pos");
+    dxl.torqueOff(DXL_ID1);
+    dxl.torqueOff(DXL_ID2);
+    dxl.torqueOff(DXL_ID3);
+    dxl.setOperatingMode(DXL_ID1, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID2, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID3, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID1, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID2, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID3, OP_VELOCITY);
+    dxl.torqueOn(DXL_ID1);
+    dxl.torqueOn(DXL_ID2);
+    dxl.torqueOn(DXL_ID3);
     if (file) {
       while (pushbutton==0) {
+      
+      dxl.setGoalVelocity(DXL_ID1, 50);
+      dxl.setGoalVelocity(DXL_ID2, 100);
+      dxl.setGoalVelocity(DXL_ID3, 200);
+
       sensors_event_t a, g, temp;
       mpu.getEvent(&a, &g, &temp);
       Serial.println(a.acceleration.x);         
-      file.println(a.acceleration.x); 
+      file.print(temp.timestamp); //get time units
+      file.print(",");
+      file.print(a.acceleration.x);
+      file.print(",");
+      file.print(a.acceleration.y);
+      file.print(",");
+      file.print(a.acceleration.z); // write number to file
+      file.print(",");
+      file.print(g.gyro.x);
+      file.print(",");
+      file.print(g.gyro.y);
+      file.print(",");
+      file.print(g.gyro.z);
+      file.print(",");
+      file.print(temp.temperature);
+      file.print(",");
+      file.print(dxl.getPresentPosition(DXL_ID1, UNIT_DEGREE));
+      file.print(",");
+      file.print(dxl.getPresentPosition(DXL_ID2, UNIT_DEGREE));
+      file.print(",");
+      file.println(dxl.getPresentPosition(DXL_ID3, UNIT_DEGREE));
+ 
       Serial.println(fileName); 
 
       delay(100);
 
-      buttonStateNow = digitalRead(7);
+      buttonStateNow = digitalRead(button_pin);
       if (buttonStateNow == 0) {
         pushbutton = 1;
         break;
@@ -96,6 +178,9 @@ pushbutton = 0;
 file.close();
 Serial.println("File Closed");
 Serial.println("Do nothing");
+dxl.torqueOff(DXL_ID1);
+dxl.torqueOff(DXL_ID2);
+dxl.torqueOff(DXL_ID3);
 }
 
 buttonStatePrev = buttonStateNow;
