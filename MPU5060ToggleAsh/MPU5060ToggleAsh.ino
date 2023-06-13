@@ -47,6 +47,9 @@ Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 
 using namespace ControlTableItem;
 
+//LED Pin Number
+int LEDPin = 13;
+
  void setup() {
   // put your setup code here, to run once:
 Serial.begin(115200);
@@ -70,6 +73,9 @@ Serial.begin(115200);
 //Serial.begin(57600);
 
 pinMode(button_pin, INPUT_PULLUP);
+
+//LED
+pinMode(LEDPin, OUTPUT);
 
 //MPU6050
 if (!mpu.begin()) {
@@ -161,6 +167,8 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
  
       Serial.println(fileName); 
 
+      digitalWrite(LEDPin,HIGH);
+
       delay(100);
 
       buttonStateNow = digitalRead(button_pin);
@@ -181,6 +189,7 @@ Serial.println("Do nothing");
 dxl.torqueOff(DXL_ID1);
 dxl.torqueOff(DXL_ID2);
 dxl.torqueOff(DXL_ID3);
+digitalWrite(LEDPin,LOW);
 }
 
 buttonStatePrev = buttonStateNow;
@@ -188,7 +197,3 @@ buttonStatePrev = buttonStateNow;
 delay(100);
 
 }
-
-
-
-//}
