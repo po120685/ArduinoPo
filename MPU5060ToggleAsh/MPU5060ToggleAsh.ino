@@ -50,6 +50,11 @@ using namespace ControlTableItem;
 //LED Pin Number
 int LEDPin = 13;
 
+//set variables for random initial positions 
+int randNum1; 
+int randNum2; 
+int randNum3;
+
  void setup() {
   // put your setup code here, to run once:
 Serial.begin(115200);
@@ -60,18 +65,7 @@ Serial.begin(115200);
   dxl.ping(DXL_ID2);
   dxl.ping(DXL_ID3);
 
-  dxl.torqueOff(DXL_ID1);
-  dxl.torqueOff(DXL_ID2);
-  dxl.torqueOff(DXL_ID3);
-  dxl.setOperatingMode(DXL_ID1, OP_VELOCITY);
-  dxl.setOperatingMode(DXL_ID2, OP_VELOCITY);
-  dxl.setOperatingMode(DXL_ID3, OP_VELOCITY);
-  dxl.torqueOn(DXL_ID1);
-  dxl.torqueOn(DXL_ID2);
-  dxl.torqueOn(DXL_ID3);
-
-//Serial.begin(57600);
-
+//Button
 pinMode(button_pin, INPUT_PULLUP);
 
 //LED
@@ -111,22 +105,45 @@ else {
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  //Button read here and print
   buttonStateNow = digitalRead(7);
   Serial.println(buttonStateNow);
 
 
+//Button conditions start here
 if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
        
-    sprintf(fileName,"JUN8_%d.CSV",buttonPressCount++);
+    sprintf(fileName,"JUN8_%d.CSV",buttonPressCount++); //Set file name
     delay(100);
     file = SD.open(fileName, FILE_WRITE);
-    file.println("time, xAcc, yAcc, zAcc, xRot, yRot, zRot, temp, servo1Pos, servo2Pos, servo3Pos");
-    dxl.torqueOff(DXL_ID1);
+    file.println("time, xAcc, yAcc, zAcc, xRot, yRot, zRot, temp, servo1Pos, servo2Pos, servo3Pos"); //set file header
+    
+    randNum1 = random(0,360); //generate random position numbers
+    randNum2 = random(0,360);
+    randNum3 = random(0,360);
+    delay(500);
+
+    dxl.torqueOff(DXL_ID1); //Initiate servo motors for velocity
     dxl.torqueOff(DXL_ID2);
     dxl.torqueOff(DXL_ID3);
-    dxl.setOperatingMode(DXL_ID1, OP_VELOCITY);
-    dxl.setOperatingMode(DXL_ID2, OP_VELOCITY);
-    dxl.setOperatingMode(DXL_ID3, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID1, OP_POSITION); //Initiate servo motors for position
+    dxl.setOperatingMode(DXL_ID2, OP_POSITION);
+    dxl.setOperatingMode(DXL_ID3, OP_POSITION);
+    dxl.torqueOn(DXL_ID1);
+    dxl.torqueOn(DXL_ID2);
+    dxl.torqueOn(DXL_ID3);
+
+    dxl.setGoalPosition(DXL_ID1,randNum1,UNIT_DEGREE); //Set Servos to random initial positions
+    dxl.setGoalPosition(DXL_ID2,randNum2,UNIT_DEGREE);
+    dxl.setGoalPosition(DXL_ID3,randNum3,UNIT_DEGREE);
+    delay(3000);
+
+    
+
+    dxl.torqueOff(DXL_ID1); //Initiate servo motors for velocity
+    dxl.torqueOff(DXL_ID2);
+    dxl.torqueOff(DXL_ID3);
     dxl.setOperatingMode(DXL_ID1, OP_VELOCITY);
     dxl.setOperatingMode(DXL_ID2, OP_VELOCITY);
     dxl.setOperatingMode(DXL_ID3, OP_VELOCITY);
@@ -134,22 +151,22 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
     dxl.torqueOn(DXL_ID2);
     dxl.torqueOn(DXL_ID3);
     if (file) {
-      while (pushbutton==0) {
+      while (pushbutton==0) { //recording and writing loop start here
       
       dxl.setGoalVelocity(DXL_ID1, 50);
       dxl.setGoalVelocity(DXL_ID2, 100);
       dxl.setGoalVelocity(DXL_ID3, 200);
 
-      sensors_event_t a, g, temp;
+      sensors_event_t a, g, temp; //Get MPU5060 Events
       mpu.getEvent(&a, &g, &temp);
-      Serial.println(a.acceleration.x);         
-      file.print(temp.timestamp); //get time units
+      Serial.println(a.acceleration.x); //write to file     
+      file.print(temp.timestamp);
       file.print(",");
       file.print(a.acceleration.x);
       file.print(",");
       file.print(a.acceleration.y);
       file.print(",");
-      file.print(a.acceleration.z); // write number to file
+      file.print(a.acceleration.z); 
       file.print(",");
       file.print(g.gyro.x);
       file.print(",");
@@ -181,7 +198,7 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
       Serial.println("Could not open File (writing)");
     }
 
-} else {
+} else { //close file and turn off Servo Motors
 pushbutton = 0;
 file.close();
 Serial.println("File Closed");
