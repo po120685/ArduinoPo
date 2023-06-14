@@ -21,10 +21,12 @@ Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 
 using namespace ControlTableItem;
 
+int randNum;
+
 
 void setup() {
   // put your setup code here, to run once:
-  DEBUG_SERIAL.begin(115200); 
+  Serial.begin(115200); 
 
   dxl.begin(57600);
   dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
@@ -35,24 +37,40 @@ void setup() {
   dxl.torqueOff(DXL_ID);
   dxl.torqueOff(DXL_IDSec);
   dxl.torqueOff(DXL_IDThir);
-  dxl.setOperatingMode(DXL_ID, OP_VELOCITY);
-  dxl.setOperatingMode(DXL_IDSec, OP_VELOCITY);
-  dxl.setOperatingMode(DXL_IDThir, OP_VELOCITY);
+  dxl.setOperatingMode(DXL_ID, OP_POSITION);
+  dxl.setOperatingMode(DXL_IDSec, OP_POSITION);
+  dxl.setOperatingMode(DXL_IDThir, OP_POSITION);
   dxl.torqueOn(DXL_ID);
   dxl.torqueOn(DXL_IDSec);
   dxl.torqueOn(DXL_IDThir);
+
+  //dxl.torqueOff(DXL_ID);
+  //dxl.torqueOff(DXL_IDSec);
+  //dxl.torqueOff(DXL_IDThir);
+  //dxl.setOperatingMode(DXL_ID, OP_VELOCITY);
+  //dxl.setOperatingMode(DXL_IDSec, OP_VELOCITY);
+  //dxl.setOperatingMode(DXL_IDThir, OP_VELOCITY);
+  //dxl.torqueOn(DXL_ID);
+  //dxl.torqueOn(DXL_IDSec);
+  //dxl.torqueOn(DXL_IDThir);
 
 
 }
 
 void loop() {
+
+  randNum= random(0,360);
+  delay(500);
+  Serial.println(randNum);
+  dxl.setGoalPosition(DXL_ID,randNum,UNIT_DEGREE);
+  delay(100);
   // put your main code here, to run repeatedly:
-  dxl.setGoalVelocity(DXL_ID, 50);
-  dxl.setGoalVelocity(DXL_IDSec, 100);
-  dxl.setGoalVelocity(DXL_IDThir, 200);
+  ////dxl.setGoalVelocity(DXL_ID, 50);
+  ////dxl.setGoalVelocity(DXL_IDSec, 100);
+  ////dxl.setGoalVelocity(DXL_IDThir, 200);
   //delay(1000);
   //Serial.print(dxl.getPresentPosition(DXL_ID)); //use default encoder value
-  DEBUG_SERIAL.print(dxl.getPresentPosition(DXL_ID, UNIT_DEGREE)); //use angle in degree
-  DEBUG_SERIAL.println(" ");
-  delay(100);
+  //DEBUG_SERIAL.print(dxl.getPresentPosition(DXL_ID, UNIT_DEGREE)); //use angle in degree
+  ////DEBUG_SERIAL.println(" ");
+  ////delay(100);
 }
