@@ -108,7 +108,7 @@ void loop() {
 
   //Button read here and print
   buttonStateNow = digitalRead(7);
-  Serial.println(buttonStateNow);
+  //Serial.println(buttonStateNow);
 
 
 //Button conditions start here
@@ -159,7 +159,7 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
 
       sensors_event_t a, g, temp; //Get MPU5060 Events
       mpu.getEvent(&a, &g, &temp);
-      Serial.println(a.acceleration.x); //write to file     
+      //Serial.println(a.acceleration.x); //write to file     
       file.print(temp.timestamp);
       file.print(",");
       file.print(a.acceleration.x);
@@ -176,13 +176,13 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
       file.print(",");
       file.print(temp.temperature);
       file.print(",");
-      file.print(dxl.getPresentPosition(DXL_ID1, UNIT_DEGREE));
+      file.print(dxl.getPresentPosition(DXL_ID1, UNIT_DEGREE)); //need to take modulous 360. rawValue/360, remainder is the modulous
       file.print(",");
       file.print(dxl.getPresentPosition(DXL_ID2, UNIT_DEGREE));
       file.print(",");
       file.println(dxl.getPresentPosition(DXL_ID3, UNIT_DEGREE));
  
-      Serial.println(fileName); 
+      //Serial.println(fileName); 
 
       digitalWrite(LEDPin,HIGH);
 
@@ -195,14 +195,14 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
       }
       }
      } else {
-      Serial.println("Could not open File (writing)");
+      //Serial.println("Could not open File (writing)");
     }
 
 } else { //close file and turn off Servo Motors
 pushbutton = 0;
 file.close();
-Serial.println("File Closed");
-Serial.println("Do nothing");
+//Serial.println("File Closed");
+//Serial.println("Do nothing");
 dxl.torqueOff(DXL_ID1);
 dxl.torqueOff(DXL_ID2);
 dxl.torqueOff(DXL_ID3);
