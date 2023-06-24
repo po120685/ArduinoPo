@@ -40,7 +40,13 @@ Adafruit_MPU6050 mpu;
 
 const uint8_t DXL_ID1  = 1; 
 const uint8_t DXL_ID2  = 2;
-const uint8_t DXL_ID3 = 3;
+const uint8_t DXL_ID3  = 3;
+const uint8_t DXL_ID4  = 4; 
+const uint8_t DXL_ID5  = 5;
+const uint8_t DXL_ID6  = 6;
+const uint8_t DXL_ID7  = 7; 
+const uint8_t DXL_ID8  = 8;
+const uint8_t DXL_ID9  = 9;
 const float DXL_PROTOCOL_VERSION = 2.0; 
 
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
@@ -54,6 +60,12 @@ int LEDPin = 13;
 int randNum1; 
 int randNum2; 
 int randNum3;
+int randNum4; 
+int randNum5; 
+int randNum6;
+int randNum7; 
+int randNum8; 
+int randNum9;
 
  void setup() {
   // put your setup code here, to run once:
@@ -64,6 +76,12 @@ Serial.begin(115200);
   dxl.ping(DXL_ID1);
   dxl.ping(DXL_ID2);
   dxl.ping(DXL_ID3);
+  dxl.ping(DXL_ID4);
+  dxl.ping(DXL_ID5);
+  dxl.ping(DXL_ID6);
+  dxl.ping(DXL_ID7);
+  dxl.ping(DXL_ID8);
+  dxl.ping(DXL_ID9);
 
 //Button
 pinMode(button_pin, INPUT_PULLUP);
@@ -117,26 +135,56 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
     sprintf(fileName,"JUN8_%d.CSV",buttonPressCount++); //Set file name
     delay(100);
     file = SD.open(fileName, FILE_WRITE);
-    file.println("time, xAcc, yAcc, zAcc, xRot, yRot, zRot, temp, servo1Pos, servo2Pos, servo3Pos"); //set file header
+    file.println("time, xAcc, yAcc, zAcc, xRot, yRot, zRot, temp, servo1Pos, servo2Pos, servo3Pos, servo4Pos, servo5Pos, servo6Pos, servo7Pos, servo8Pos, servo9Pos"); //set file header
     
     randNum1 = random(0,360); //generate random position numbers
     randNum2 = random(0,360);
     randNum3 = random(0,360);
+    randNum4 = random(0,360); //generate random position numbers
+    randNum5 = random(0,360);
+    randNum6 = random(0,360);
+    randNum7 = random(0,360); //generate random position numbers
+    randNum8 = random(0,360);
+    randNum9 = random(0,360);
     delay(500);
 
     dxl.torqueOff(DXL_ID1); //Initiate servo motors for velocity
     dxl.torqueOff(DXL_ID2);
     dxl.torqueOff(DXL_ID3);
+    dxl.torqueOff(DXL_ID4); //Initiate servo motors for velocity
+    dxl.torqueOff(DXL_ID5);
+    dxl.torqueOff(DXL_ID6);
+    dxl.torqueOff(DXL_ID7); //Initiate servo motors for velocity
+    dxl.torqueOff(DXL_ID8);
+    dxl.torqueOff(DXL_ID9);
     dxl.setOperatingMode(DXL_ID1, OP_POSITION); //Initiate servo motors for position
     dxl.setOperatingMode(DXL_ID2, OP_POSITION);
     dxl.setOperatingMode(DXL_ID3, OP_POSITION);
+    dxl.setOperatingMode(DXL_ID4, OP_POSITION); //Initiate servo motors for position
+    dxl.setOperatingMode(DXL_ID5, OP_POSITION);
+    dxl.setOperatingMode(DXL_ID6, OP_POSITION);
+    dxl.setOperatingMode(DXL_ID7, OP_POSITION); //Initiate servo motors for position
+    dxl.setOperatingMode(DXL_ID8, OP_POSITION);
+    dxl.setOperatingMode(DXL_ID9, OP_POSITION);
     dxl.torqueOn(DXL_ID1);
     dxl.torqueOn(DXL_ID2);
     dxl.torqueOn(DXL_ID3);
+    dxl.torqueOn(DXL_ID4);
+    dxl.torqueOn(DXL_ID5);
+    dxl.torqueOn(DXL_ID6);
+    dxl.torqueOn(DXL_ID7);
+    dxl.torqueOn(DXL_ID8);
+    dxl.torqueOn(DXL_ID9);
 
     dxl.setGoalPosition(DXL_ID1,randNum1,UNIT_DEGREE); //Set Servos to random initial positions
     dxl.setGoalPosition(DXL_ID2,randNum2,UNIT_DEGREE);
     dxl.setGoalPosition(DXL_ID3,randNum3,UNIT_DEGREE);
+    dxl.setGoalPosition(DXL_ID4,randNum4,UNIT_DEGREE); //Set Servos to random initial positions
+    dxl.setGoalPosition(DXL_ID5,randNum5,UNIT_DEGREE);
+    dxl.setGoalPosition(DXL_ID6,randNum6,UNIT_DEGREE);
+    dxl.setGoalPosition(DXL_ID7,randNum7,UNIT_DEGREE); //Set Servos to random initial positions
+    dxl.setGoalPosition(DXL_ID8,randNum8,UNIT_DEGREE);
+    dxl.setGoalPosition(DXL_ID9,randNum9,UNIT_DEGREE);
     delay(3000);
 
     
@@ -144,18 +192,42 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
     dxl.torqueOff(DXL_ID1); //Initiate servo motors for velocity
     dxl.torqueOff(DXL_ID2);
     dxl.torqueOff(DXL_ID3);
+    dxl.torqueOff(DXL_ID4); //Initiate servo motors for velocity
+    dxl.torqueOff(DXL_ID5);
+    dxl.torqueOff(DXL_ID6);
+    dxl.torqueOff(DXL_ID7); //Initiate servo motors for velocity
+    dxl.torqueOff(DXL_ID8);
+    dxl.torqueOff(DXL_ID9);
     dxl.setOperatingMode(DXL_ID1, OP_VELOCITY);
     dxl.setOperatingMode(DXL_ID2, OP_VELOCITY);
     dxl.setOperatingMode(DXL_ID3, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID4, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID5, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID6, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID7, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID8, OP_VELOCITY);
+    dxl.setOperatingMode(DXL_ID9, OP_VELOCITY);
     dxl.torqueOn(DXL_ID1);
     dxl.torqueOn(DXL_ID2);
     dxl.torqueOn(DXL_ID3);
+    dxl.torqueOn(DXL_ID4);
+    dxl.torqueOn(DXL_ID5);
+    dxl.torqueOn(DXL_ID6);
+    dxl.torqueOn(DXL_ID7);
+    dxl.torqueOn(DXL_ID8);
+    dxl.torqueOn(DXL_ID9);
     if (file) {
       while (pushbutton==0) { //recording and writing loop start here
       
-      dxl.setGoalVelocity(DXL_ID1, 50);
-      dxl.setGoalVelocity(DXL_ID2, 100);
+      dxl.setGoalVelocity(DXL_ID1, 200);
+      dxl.setGoalVelocity(DXL_ID2, 200);
       dxl.setGoalVelocity(DXL_ID3, 200);
+      dxl.setGoalVelocity(DXL_ID4, 200);
+      dxl.setGoalVelocity(DXL_ID5, 200);
+      dxl.setGoalVelocity(DXL_ID6, 200);
+      dxl.setGoalVelocity(DXL_ID7, 200);
+      dxl.setGoalVelocity(DXL_ID8, 200);
+      dxl.setGoalVelocity(DXL_ID9, 200);
 
       sensors_event_t a, g, temp; //Get MPU5060 Events
       mpu.getEvent(&a, &g, &temp);
@@ -180,7 +252,19 @@ if (buttonStatePrev==1 && buttonStateNow==0 && pushbutton ==0) {
       file.print(",");
       file.print(dxl.getPresentPosition(DXL_ID2, UNIT_DEGREE));
       file.print(",");
-      file.println(dxl.getPresentPosition(DXL_ID3, UNIT_DEGREE));
+      file.print(dxl.getPresentPosition(DXL_ID3, UNIT_DEGREE));
+      file.print(",");
+      file.print(dxl.getPresentPosition(DXL_ID4, UNIT_DEGREE)); //need to take modulous 360. rawValue/360, remainder is the modulous
+      file.print(",");
+      file.print(dxl.getPresentPosition(DXL_ID5, UNIT_DEGREE));
+      file.print(",");
+      file.print(dxl.getPresentPosition(DXL_ID6, UNIT_DEGREE));
+      file.print(",");
+      file.print(dxl.getPresentPosition(DXL_ID7, UNIT_DEGREE)); //need to take modulous 360. rawValue/360, remainder is the modulous
+      file.print(",");
+      file.print(dxl.getPresentPosition(DXL_ID8, UNIT_DEGREE));
+      file.print(",");
+      file.println(dxl.getPresentPosition(DXL_ID9, UNIT_DEGREE));
  
       //Serial.println(fileName); 
 
@@ -206,6 +290,12 @@ file.close();
 dxl.torqueOff(DXL_ID1);
 dxl.torqueOff(DXL_ID2);
 dxl.torqueOff(DXL_ID3);
+dxl.torqueOff(DXL_ID4);
+dxl.torqueOff(DXL_ID5);
+dxl.torqueOff(DXL_ID6);
+dxl.torqueOff(DXL_ID7);
+dxl.torqueOff(DXL_ID8);
+dxl.torqueOff(DXL_ID9);
 digitalWrite(LEDPin,LOW);
 }
 
