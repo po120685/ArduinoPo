@@ -43,9 +43,9 @@ void setup(void) {
 
 void loop() {
   //0-4095 position mapping
-  //millis()/100.0 time variable - bigger means slower motion 
-  // 1000 * sin... scales the wave - how much it ossiclates in between
-  // 2000 + ... shifts the wave back and forth
+  //millis()/250.0 time variable - bigger means slower motion 
+  // 5000 * sin... scales the wave - how much it ossiclates in between
+  // 3000 + ... shifts the wave back and forth
   int drive = 3000 + 500 * sin(millis()/250.0);
 
  //reads position of servo1 and position of servo2
