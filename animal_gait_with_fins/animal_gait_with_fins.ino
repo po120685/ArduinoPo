@@ -11,6 +11,7 @@
 // Monitor debug prints can't use it -- soft_serial (pins 7/8) with
 // SoftwareSerial stands in for that instead.
 // ---------------------------------------------------------
+
 SoftwareSerial soft_serial(7, 8);          // debug RX, TX only
 #define DXL_SERIAL   Serial
 #define DXL_DIR_PIN  2
@@ -29,11 +30,11 @@ const uint16_t ADDR_MOVING_SPEED  = 32;
 // =========================
 // Settings
 // =========================
-const uint8_t DXL_ID_1 = 1;    // body joint 1 (head)
-const uint8_t DXL_ID_2 = 7;    // body joint 2 (tail)
-const uint8_t DXL_ID_8 = 10;    // right front fin
+const uint8_t DXL_ID_1  = 1;   // body joint 1 (head)
+const uint8_t DXL_ID_2  = 7;   // body joint 2 (tail)
+const uint8_t DXL_ID_10  = 10;  // right front fin
 const uint8_t DXL_ID_11 = 11;  // left front fin
-const uint8_t ALL_MOTOR_IDS[4] = { DXL_ID_1, DXL_ID_2, DXL_ID_8, DXL_ID_11 };
+const uint8_t ALL_MOTOR_IDS[4] = { DXL_ID_1, DXL_ID_2, DXL_ID_10, DXL_ID_11 };
 const uint32_t BAUDRATE = 115200;
 
 // =========================
@@ -41,7 +42,7 @@ const uint32_t BAUDRATE = 115200;
 // =========================
 const int CENTER_POS_1 = 692;
 const int CENTER_POS_2 = 508;
-const int MOVING_SPEED = 300;   // 0-1023; lower = smoother/slower hardware 100
+const int MOVING_SPEED = 300;   // 0-1023; lower = smoother/slower hardware
                                  // interpolation, higher = snappier but more
                                  // prone to looking choppy.
 
@@ -55,15 +56,19 @@ const int MOVING_SPEED = 300;   // 0-1023; lower = smoother/slower hardware 100
 //                       100deg = fins just touching
 //                       150deg = directly below body (full plant)
 // ---------------------------------------------------------
-const float FIN8_LIFTED_DEG   = 79;  // right fin, out of the way //140
-const float FIN8_PLANTED_DEG  = 140;   // right fin, planted //79
-const float FIN11_LIFTED_DEG  = 132;   // left fin, out of the way //56
-const float FIN11_PLANTED_DEG = 56;  // left fin, planted //132
+// NOTE: motor IDs 10 and 11 turned out to be physically swapped
+// relative to what the gait logic assumes (finRightDeg was reaching
+// the physically-left fin and vice versa). Swapping each motor's own
+// LIFTED/PLANTED values is mathematically equivalent to swapping which
+// motor receives which field, since each motor only ever gets one of
+// these two targets -- confirmed correct by observation.
+const float FIN10_LIFTED_DEG   = 79;   // (physically) out of the way
+const float FIN10_PLANTED_DEG  = 140;  // (physically) planted
+const float FIN11_LIFTED_DEG  = 132;  // (physically) out of the way
+const float FIN11_PLANTED_DEG = 56;   // (physically) planted
 
-const int FIN_MOVING_SPEED = 300;   // separate hardware speed limit for fins 100
-const float FIN_EASE_TIME  = 0.45;  // seconds -- kept comfortably under the 0.15
-                                     // shortest gait duration (0.35s) so the
-                                     // fin plant/lift never gets cut off
+const int FIN_MOVING_SPEED = 300;   // separate hardware speed limit for fins
+const float FIN_EASE_TIME  = 0.10;  // seconds -- fins plant/lift decisively
 const int FIN_ZERO_POS     = 0;     // raw hardware zero, startup/home pose
 
 int degToPos(float deg) {
@@ -82,9 +87,7 @@ int degToPos(float deg) {
 //   S-shape: head has already flipped toward the new side while the
 //            tail is still finishing the previous bend -> double
 //            curve, matching how a real traveling wave leads with
-//            the head. That's why in S-right, offset1 is negative
-//            (heading toward left/C-left) while offset2 is still
-//            positive (tail hasn't caught up from C-right yet).
+//            the head.
 //
 // duration: how long (seconds) this pose is held before the next one
 // (must be >= easeTime, or the next transition interrupts it early).
@@ -102,19 +105,39 @@ struct Gait {
   float duration;
   float finRightDeg;
   float finLeftDeg;
+  float finDelay;   // seconds to wait into this gait before the fin
+                     // starts easing -- lets the fin plant/lift land
+                     // right at the end of the pose instead of the start
 };
 
 Gait GAITS[4] = {
-  { "C-right", 200, 180, 0.20, 0.45, FIN8_LIFTED_DEG,  FIN11_PLANTED_DEG }, // 200,  180,  1.20, 2.70,
-  { "S-right", -200, 180, 0.20, 0.35, FIN8_LIFTED_DEG,  FIN11_PLANTED_DEG }, //  -200, 180,  1.20, 2.10,
-  { "C-left", -200, -180, 0.20, 0.45, FIN8_PLANTED_DEG, FIN11_LIFTED_DEG  }, //  -200, -180,  1.20, 2.70,
-  { "S-left",  200, -180, 0.20, 0.35, FIN8_PLANTED_DEG, FIN11_LIFTED_DEG  }, //  200, -180,  1.20, 2.10,
+  // Fin targets now stay UNCHANGED through each C pose (holding
+  // whatever the previous S pose left them at), and only switch to
+  // their new target after a short finDelay into the following S pose
+  // -- so the lift/plant happens just after the C-hold ends, not
+  // during it. Because one fin lifts exactly as the other plants,
+  // this delay applies to both at once. //ease time (ramp to position), hold time (how long switching to next position), fin delay (pause)
+  { "C-right", 200,  180,  0.20, 0.45, FIN10_PLANTED_DEG, FIN11_LIFTED_DEG,  0.0   },
+  { "S-right", -200, 180,  0.20, 0.35, FIN10_LIFTED_DEG,  FIN11_PLANTED_DEG, 0.025 },
+  { "C-left", -200, -180,  0.20, 0.45, FIN10_LIFTED_DEG,  FIN11_PLANTED_DEG, 0.0   },
+  { "S-left",  200, -180,  0.20, 0.35, FIN10_PLANTED_DEG, FIN11_LIFTED_DEG,  0.025 },
+// Speed/timing scaling reference (baseline calibrated at MOVING_SPEED=50)
+// MovingSpeed,EaseTime,CDuration,SDuration,FinEaseTime,FinDelay
+// 50,1.20,2.70,2.10,0.60,0.150
+// 100,0.60,1.35,1.05,0.30,0.075
+// 150,0.40,0.90,0.70,0.20,0.050
+// 200,0.30,0.675,0.525,0.15,0.0375
+// 300,0.20,0.45,0.35,0.10,0.025
 };
 const int NUM_GAITS = 4;
 
 // =========================
 // Low-level write helpers (mirror write1/2ByteTxOnly from Python)
-// =========================
+// ---------------------------------------------------------
+// Note: an explicit short write timeout was tried here previously and
+// made no real difference on this hardware, so it's intentionally
+// left out -- these use the library's default.
+// ---------------------------------------------------------
 void writeByte(uint8_t id, uint16_t addr, uint8_t value) {
   dxl.write(id, addr, &value, 1);
 }
@@ -163,14 +186,14 @@ void setup() {
 
   writeWord(DXL_ID_1, ADDR_MOVING_SPEED, MOVING_SPEED);
   writeWord(DXL_ID_2, ADDR_MOVING_SPEED, MOVING_SPEED);
-  writeWord(DXL_ID_8, ADDR_MOVING_SPEED, FIN_MOVING_SPEED);
+  writeWord(DXL_ID_10, ADDR_MOVING_SPEED, FIN_MOVING_SPEED);
   writeWord(DXL_ID_11, ADDR_MOVING_SPEED, FIN_MOVING_SPEED);
   DEBUG_SERIAL.println("Moving speed set");
 
   writeWord(DXL_ID_1, ADDR_GOAL_POSITION, CENTER_POS_1);
   writeWord(DXL_ID_2, ADDR_GOAL_POSITION, CENTER_POS_2);
-  writeWord(DXL_ID_8, ADDR_GOAL_POSITION, FIN_ZERO_POS);
-  writeWord(DXL_ID_11, ADDR_GOAL_POSITION, FIN_ZERO_POS);
+  writeWord(DXL_ID_10, ADDR_GOAL_POSITION, degToPos(FIN10_PLANTED_DEG));
+  writeWord(DXL_ID_11, ADDR_GOAL_POSITION, degToPos(FIN11_PLANTED_DEG));
   delay(2000);
 
   DEBUG_SERIAL.println("Starting animal-like gait sequence");
@@ -179,8 +202,8 @@ void setup() {
   gaitStartTime = millis();
   lastCommandedPos1 = CENTER_POS_1;
   lastCommandedPos2 = CENTER_POS_2;
-  lastCommandedFin8 = FIN_ZERO_POS;
-  lastCommandedFin11 = FIN_ZERO_POS;
+  lastCommandedFin8 = degToPos(FIN10_PLANTED_DEG);
+  lastCommandedFin11 = degToPos(FIN11_PLANTED_DEG);
   switchPos1 = lastCommandedPos1;
   switchPos2 = lastCommandedPos2;
   switchFin8 = lastCommandedFin8;
@@ -205,17 +228,20 @@ void loop() {
   }
 
   // Body: single smoothstep ease directly from the actual current
-  // position to the gait's final target -- no double-layered easing
+  // position to the gait's final target
   float target1 = CENTER_POS_1 + gait.offset1;
   float target2 = CENTER_POS_2 + gait.offset2;
   float eBody = smoothstep(elapsedInGait / gait.easeTime);
   float pos1 = lerp(switchPos1, target1, eBody);
   float pos2 = lerp(switchPos2, target2, eBody);
 
-  // Fins: eased over FIN_EASE_TIME so they plant/lift decisively
+  // Fins: wait finDelay seconds into the gait, then ease over
+  // FIN_EASE_TIME so they plant/lift decisively, landing right at
+  // the end of the pose rather than the start
   float targetFin8 = degToPos(gait.finRightDeg);
   float targetFin11 = degToPos(gait.finLeftDeg);
-  float eFin = smoothstep(elapsedInGait / FIN_EASE_TIME);
+  float finElapsed = elapsedInGait - gait.finDelay;
+  float eFin = smoothstep(finElapsed / FIN_EASE_TIME);
   float fin8 = lerp(switchFin8, targetFin8, eFin);
   float fin11 = lerp(switchFin11, targetFin11, eFin);
 
@@ -226,7 +252,7 @@ void loop() {
 
   writeWord(DXL_ID_1, ADDR_GOAL_POSITION, (int)pos1);
   writeWord(DXL_ID_2, ADDR_GOAL_POSITION, (int)pos2);
-  writeWord(DXL_ID_8, ADDR_GOAL_POSITION, (int)fin8);
+  writeWord(DXL_ID_10, ADDR_GOAL_POSITION, (int)fin8);
   writeWord(DXL_ID_11, ADDR_GOAL_POSITION, (int)fin11);
 
   // Uncomment to watch the state machine while tuning:
