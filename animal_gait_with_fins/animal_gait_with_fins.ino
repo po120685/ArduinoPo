@@ -6,6 +6,7 @@
 #include <Wire.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+#include <TimerOne.h>
 
 // NOTE: deliberately NOT using `using namespace ControlTableItem;` here --
 // the library defines its own MOVING_SPEED item, which collides with this
@@ -179,6 +180,29 @@ float smoothstep(float t) {
   if (t < 0.0) t = 0.0;
   if (t > 1.0) t = 1.0;
   return t * t * (3 - 2 * t);
+}
+
+// =========================
+// Camera trigger (BlackFly S sync, external hardware trigger)
+// ---------------------------------------------------------
+// TimerOne owns Timer1 to fire a jitter-free 100Hz interrupt -- this
+// only affects analogWrite() on pins 11/12 (Timer1's PWM outputs),
+// which this sketch never uses (servos go over the DXL bus, not
+// Arduino PWM). D9 is physically blocked by the DYNAMIXEL shield, so
+// D11 is used instead.
+//
+// Runs as a hardware interrupt, independent of loop()'s blocking DXL
+// round trips / SD writes / delay(20) -- the pulse train stays steady
+// even while loop() is stalled on something else.
+// ---------------------------------------------------------
+const int CAMERA_TRIGGER_PIN = 11;
+const long CAMERA_FPS = 100;
+const long CAMERA_TRIGGER_PERIOD_US = 1000000 / CAMERA_FPS;
+
+void cameraTriggerPulse() {
+  digitalWrite(CAMERA_TRIGGER_PIN, HIGH);
+  delayMicroseconds(50);
+  digitalWrite(CAMERA_TRIGGER_PIN, LOW);
 }
 
 // =========================
@@ -431,6 +455,10 @@ void setup() {
 
   sdReady = setupSD();
   runStartMillis = millis();
+
+  pinMode(CAMERA_TRIGGER_PIN, OUTPUT);
+  Timer1.initialize(CAMERA_TRIGGER_PERIOD_US);
+  Timer1.attachInterrupt(cameraTriggerPulse);
 
   Serial.print(F("Summary -- SD: "));
   Serial.print(sdReady ? F("OK") : F("FAILED"));
