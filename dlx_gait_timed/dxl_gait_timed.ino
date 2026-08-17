@@ -74,6 +74,15 @@ const int MOVING_SPEED = 300;   // 0-1023; lower = smoother/slower hardware
                                  // interpolation, higher = snappier but more
                                  // prone to looking choppy.
 
+// Scales every gait's offset1/offset2 (i.e. how far head/tail bend from
+// center) without touching the GAITS table itself, so "S-right" etc.
+// still means the same shape, just a bigger or smaller version of it.
+// 1.0 = original tuned amplitude, 0.0 = straight body (no curvature).
+// Edit this and reflash for each trial; it's also written into the SD
+// run marker and the debug-serial boot summary so it's tied to that
+// run's data for later matching against dltdv8 tracks.
+const float CURVATURE_SCALE = 1.0;
+
 // =========================
 // Front fin parameters (degrees -- converted to ticks automatically)
 // ---------------------------------------------------------
@@ -117,7 +126,6 @@ int degToPos(float deg) {
 //   t = SEQ_CAMERA_START_MS       : camera trigger PWM starts; robot
 //                                    begins easing to its home pose
 //                                    (pre-home window, HOME_EASE_MS long)
-//   t = SEQ_MOTOR_START_MS        : pre-home ease finishes exactly here;
 //                                    motors start their gait sequence;
 //                                    IMU + SD logging start
 //   t = SEQ_MOTOR_STOP_MS         : motors/IMU/SD stop; robot begins
@@ -310,7 +318,7 @@ const int SD_CS_PIN = 4;
 // just returns an invalid File handle, and every write silently no-ops
 // since setupSD()/logRow() both check `if (file)` first. Keep this at
 // 8 characters or fewer.
-const char* LOG_FILENAME = "dxl1.csv";
+const char* LOG_FILENAME = "dxl2.csv";
 const unsigned long LOG_INTERVAL_MS = 250;  // how often a NEW read/log cycle can start
 
 bool sdReady = false;
@@ -362,7 +370,9 @@ bool setupSD() {
   if (marker) {
     marker.print("=== RUN ");
     marker.print(runNumber);
-    marker.println(" START ===");
+    marker.print(" START (curvature_scale=");
+    marker.print(CURVATURE_SCALE, 3);
+    marker.println(") ===");
     marker.close();
   } else {
     Serial.println(F("SD.begin() OK, header exists, but could not open for run marker"));
@@ -532,7 +542,9 @@ void setup() {
   Serial.print(F("Summary -- SD: "));
   Serial.print(sdReady ? F("OK") : F("FAILED"));
   Serial.print(F(", IMU: "));
-  Serial.println(imuReady ? F("OK") : F("FAILED"));
+  Serial.print(imuReady ? F("OK") : F("FAILED"));
+  Serial.print(F(", curvature_scale: "));
+  Serial.println(CURVATURE_SCALE, 3);
   Serial.println(F("Switching Serial to DXL bus now..."));
   Serial.flush();  // make sure the summary is actually sent before DXL traffic starts
 
@@ -640,7 +652,9 @@ void loop() {
       runStartMillis = now;
 
       DEBUG_SERIAL.print(F("Motors STARTED -- gait sequence + SD/IMU logging, run "));
-      DEBUG_SERIAL.println(runNumber);
+      DEBUG_SERIAL.print(runNumber);
+      DEBUG_SERIAL.print(F(", curvature_scale="));
+      DEBUG_SERIAL.println(CURVATURE_SCALE, 3);
     }
 
     Gait gait = GAITS[gaitIndex];
@@ -659,9 +673,11 @@ void loop() {
     }
 
     // Body: single smoothstep ease directly from the actual current
-    // position to the gait's final target
-    float target1 = CENTER_POS_1 + gait.offset1;
-    float target2 = CENTER_POS_2 + gait.offset2;
+    // position to the gait's final target. Offsets are scaled by
+    // CURVATURE_SCALE so amplitude/curvature can be tuned without
+    // touching the gait shapes themselves.
+    float target1 = CENTER_POS_1 + gait.offset1 * CURVATURE_SCALE;
+    float target2 = CENTER_POS_2 + gait.offset2 * CURVATURE_SCALE;
     float eBody = smoothstep(elapsedInGait / gait.easeTime);
     float pos1 = lerp(switchPos1, target1, eBody);
     float pos2 = lerp(switchPos2, target2, eBody);
